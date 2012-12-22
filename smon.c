@@ -82,15 +82,15 @@ static unsigned char *_get_raw_diff(unsigned char *s1, unsigned char *s2,
 /**
  * Gets a snapshot of the segment from the image process
  */
-static unsigned char *_get_snapshot(pid_t pid, uintptr_t addrs[2])
+static unsigned char *_get_snapshot(const smon_t *smon)
 {
-	unsigned char *mem, *buffer = calloc(1, addrs[1] - addrs[0]);
-	uintptr_t addr = addrs[0];
+	unsigned char *mem, *buffer = calloc(1, smon->eaddr - smon->saddr);
+	uintptr_t addr = smon->saddr;
 	
 	mem = buffer;
 
-	while (addr < addrs[1]) {
-		ptrace_read_long(pid, addr, mem);
+	while (addr < smon->eaddr) {
+		ptrace_read_long(smon->pid, addr, mem);
 		mem += sizeof(long);
 		addr += sizeof(long);		
 	}
@@ -101,17 +101,17 @@ static unsigned char *_get_snapshot(pid_t pid, uintptr_t addrs[2])
 /**
  * Main-loop of tracing
  */
-static void _loop(pid_t pid, uintptr_t addrs[2])
+static void _loop(smon_t *smon)
 {
 	unsigned char *mem, *mem2 = NULL;
-	int status;
-	uintptr_t offset = addrs[0];
-	uint64_t slen = addrs[1] - addrs[0];
+	int status, ndump = 0;
+	uintptr_t offset = smon->saddr;
+	uint64_t slen = smon->eaddr - smon->saddr;
 	
 	while (1) {
 		mem = mem2 ? mem2 : NULL;
 		
-		if (ptrace(PTRACE_SYSCALL, pid, NULL, NULL) != 0) {
+		if (ptrace(PTRACE_SYSCALL, smon->pid, NULL, NULL) != 0) {
 			printf("[!] singlestep failed!\n");
 			free(mem);			
 			break;
@@ -125,7 +125,7 @@ static void _loop(pid_t pid, uintptr_t addrs[2])
 			break;
 		}
 		
-		mem2 = _get_snapshot(pid, addrs);
+		mem2 = _get_snapshot(smon);
 		
 		if ((mem && mem2) && memcmp(mem, mem2, slen)) {			
 			unsigned char *buf = _get_raw_diff(mem, mem2, slen, &offset);
@@ -133,8 +133,12 @@ static void _loop(pid_t pid, uintptr_t addrs[2])
 			printf("[*] segment has been changed at %" PRIxPTR "\n",
 				offset);
 			
-			_dump_segment(buf, offset);
-			free(buf);
+			if (ndump < smon->maxdump) {
+				_dump_segment(buf, offset);
+				free(buf);
+			
+				++ndump;
+			}
 		}
 		
 		if (mem) {
@@ -150,7 +154,7 @@ static void _loop(pid_t pid, uintptr_t addrs[2])
 /**
  * Finds the segment to be monitored
  */
-static int _find_segment(pid_t pid, size_t segment, uintptr_t addr[2])
+static int _find_segment(const smon_t *smon, uintptr_t addr[2])
 {
 	FILE *fp;
 	size_t size;
@@ -158,7 +162,7 @@ static int _find_segment(pid_t pid, size_t segment, uintptr_t addr[2])
 	char fname[PATH_MAX], filename[PATH_MAX], perms[5], *line = NULL;
 	unsigned int offset, dmajor, dminor, inode;
 
-	snprintf(fname, sizeof(fname), "/proc/%d/maps", pid);
+	snprintf(fname, sizeof(fname), "/proc/%d/maps", smon->pid);
 	
 	if ((fp = fopen(fname, "r")) == NULL) {
 		printf("[!] failed to open '%s'\n", fname);
@@ -172,7 +176,8 @@ static int _find_segment(pid_t pid, size_t segment, uintptr_t addr[2])
 			(end - start) == 0) {
 			return 0;
 		}
-		if ((segment & SMON_STACK) && strcmp(filename, "[stack]") == 0) {
+		if ((smon->segment & SMON_STACK) != 0 
+			&& strcmp(filename, "[stack]") == 0) {
 			printf("[+] stack found at %lx-%lx (%ld bytes)\n",
 				start, end, end - start);
 			
@@ -191,32 +196,34 @@ static int _find_segment(pid_t pid, size_t segment, uintptr_t addr[2])
 /**
  * Monitors by using a supplied pid
  */
-void smon_pid(pid_t pid, size_t segment)
+void smon_pid(smon_t *smon)
 {
 	uintptr_t addrs[2];
 	
-	if (ptrace_attach(pid) == 0) {
-		printf("[+] attached to pid %d\n", pid);
+	if (ptrace_attach(smon->pid) == 0) {
+		printf("[+] attached to pid %d\n", smon->pid);
 	} else {
-		printf("[!] failed to attach to pid %d\n", pid);
+		printf("[!] failed to attach to pid %d\n", smon->pid);
 		return;
 	}
 	
-	if (_find_segment(pid, segment, addrs)) {
-		_loop(pid, addrs);
+	if (_find_segment(smon, addrs)) {
+		smon->saddr = addrs[0];
+		smon->eaddr = addrs[1];
+		_loop(smon);
 	}
 	
-	if (ptrace_detach(pid) == 0) {
-		printf("[+] detached from pid %d\n", pid);
+	if (ptrace_detach(smon->pid) == 0) {
+		printf("[+] detached from pid %d\n", smon->pid);
 	} else {
-		printf("[!] failed to detach from pid %d\n", pid);
+		printf("[!] failed to detach from pid %d\n", smon->pid);
 	}
 }
 
 /**
  * Monitors by using a program name
  */
-void smon_exec(const char *program, size_t segment)
+void smon_exec(smon_t *smon)
 {
-	printf("[%s]\n", program);
+	printf("[%s]\n", smon->program);
 }

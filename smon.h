@@ -26,6 +26,18 @@
 #ifndef SMON_H
 #define SMON_H
 
+#include <unistd.h>
+#include <inttypes.h>
+
+typedef struct {
+	pid_t pid;           /* pid of monitored program (-p option) */
+	const char *program; /* program name (-e option) */
+	size_t segment;      /* segment to be monitored */
+	int maxdump;         /* max number of segment dump */
+	uintptr_t saddr;     /* start address of segment */
+	uintptr_t eaddr;     /* end address of segment */
+} smon_t;
+
 /**
  * Max segment diff buffer
  */
@@ -39,7 +51,7 @@
 /**
  * smon functions
  */
-void smon_pid(pid_t, size_t);
-void smon_exec(const char*, size_t);
+void smon_pid(smon_t*);
+void smon_exec(smon_t*);
 
 #endif /* SMON_H */

@@ -32,33 +32,37 @@ static void usage()
 {
 	printf("Usage: smon <-p pid| program> <options>\n"
 			"Options:\n"
-			" -s\tMonitors the stack segment\n\n");
+			" -s\tMonitors the stack segment\n"
+			" -n\tMax number of segment dumps\n\n");
 }
 
 int main(int argc, char **argv)
 {
 	int c;
-	pid_t pid = 0;
-	size_t segment = 0;
+	smon_t info = {0};
 	
-	while ((c = getopt(argc, argv, "hp:s")) != -1) {
+	while ((c = getopt(argc, argv, "hn:p:s")) != -1) {
 		switch (c) {
 			case 'h':
 				usage();
 				exit(0);
+			case 'n':
+				info.maxdump = atol(optarg);
+				break;
 			case 'p':
-				pid = atol(optarg);
+				info.pid = atol(optarg);
 				break;
 			case 's':
-				segment |= SMON_STACK;
+				info.segment |= SMON_STACK;
 				break;
 		}
 	}
 	
-	if (pid) {
-		smon_pid(pid, segment);
+	if (info.pid) {
+		smon_pid(&info);
 	} else if (optind < argc) {
-		smon_exec(argv[optind], segment);
+		info.program = argv[optind];
+		smon_exec(&info);
 	} else {
 		usage();
 	}
