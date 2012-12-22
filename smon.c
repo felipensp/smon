@@ -1,4 +1,5 @@
 #include <stdio.h>
+#include <ctype.h>
 #include <unistd.h>
 #include <limits.h>
 #include <inttypes.h>
@@ -6,6 +7,29 @@
 #include <stdlib.h>
 #include "ptrace.h"
 #include "smon.h"
+
+/**
+ * Raw data diffing
+ */
+static unsigned char *_get_raw_diff(unsigned char *s1, unsigned char *s2,
+	uint64_t slen, uintptr_t *offset)
+{
+	const size_t bufmax = 600;
+	unsigned char *buf = calloc(1, bufmax);
+	register uint64_t i = 0;
+	size_t buflen = 0;
+	
+	for (; i < slen && buflen < bufmax; ++i) {
+		if (s1[i] != s2[i]) {
+			buf[buflen++] = isprint(s2[i]) ? s2[i] : '.';
+		}
+		if (buflen == 0) {
+			++offset;
+		}
+	}
+	
+	return buf;
+}
 
 /**
  * Gets a snapshot of the segment from the image process
@@ -33,6 +57,8 @@ static void _loop(pid_t pid, uintptr_t addrs[2])
 {
 	unsigned char *mem, *mem2 = NULL;
 	int status;
+	uintptr_t offset = addrs[0];
+	uint64_t slen = addrs[1] - addrs[0];
 	
 	while (1) {
 		mem = mem2 ? mem2 : NULL;
@@ -53,8 +79,13 @@ static void _loop(pid_t pid, uintptr_t addrs[2])
 		
 		mem2 = _get_snapshot(pid, addrs);
 		
-		if ((mem && mem2) && memcmp(mem, mem2, addrs[1] - addrs[0])) {
-			printf("[*] segment has been changed!\n");
+		if ((mem && mem2) && memcmp(mem, mem2, slen)) {			
+			unsigned char *buf = _get_raw_diff(mem, mem2, slen, &offset);
+			
+			printf("[*] segment has been changed at %" PRIxPTR "\n",
+				offset);			
+			printf("Printable snapshot (600 chars) [%s]\n", buf);
+			free(buf);
 		}
 		
 		if (mem) {
