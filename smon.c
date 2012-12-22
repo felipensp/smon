@@ -101,7 +101,7 @@ static unsigned char *_get_snapshot(const smon_t *smon)
 /**
  * Main-loop of tracing
  */
-static void _loop(smon_t *smon)
+static void _loop(const smon_t *smon)
 {
 	unsigned char *mem, *mem2 = NULL;
 	int status, ndump = 0;
