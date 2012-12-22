@@ -1,6 +1,6 @@
 CC?=gcc
 CFLAGS=-g -Wall -pedantic
-OBJECTS=smon.o main.o
+OBJECTS=ptrace.o smon.o main.o
 
 %.o: %.c
 	$(CC) -c $(CFLAGS) -o $@ $<
