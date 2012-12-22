@@ -12,7 +12,7 @@ felipe@sig11:~/dev/smon$ ./smon -s -p 9222 &
 
 [1]+  Stopped                 ./samples/fgets
 felipe@sig11:~/dev/smon$ [+] attached to pid 9222
-[+] stack found at 7fff37c40000-7fff37c61000=135168 bytes
+[+] stack found at 7fff37c40000-7fff37c61000 (135168 bytes)
 fg 1
 ./samples/fgets
 foobar

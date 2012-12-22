@@ -93,7 +93,7 @@ static int _find_segment(pid_t pid, size_t segment, uintptr_t addr[2])
 			return 0;
 		}
 		if ((segment & SMON_STACK) && strcmp(filename, "[stack]") == 0) {
-			printf("[+] stack found at %lx-%lx=%ld bytes\n",
+			printf("[+] stack found at %lx-%lx (%ld bytes)\n",
 				start, end, end - start);
 			
 			addr[0] = start;
