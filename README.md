@@ -1,4 +1,4 @@
-segmon
+smon
 ======
 
 Process segment monitor
