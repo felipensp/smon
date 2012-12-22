@@ -2,6 +2,11 @@
 #define SMON_H
 
 /**
+ * Max segment diff buffer
+ */
+#define MAXBUF 320
+
+/**
  * Segments available to be monited
  */
 #define SMON_STACK 0x1

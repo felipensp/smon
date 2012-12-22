@@ -9,19 +9,42 @@
 #include "smon.h"
 
 /**
+ * Dumps the segment data in a hexdump way
+ */
+static void _dump_segment(unsigned char *s, uintptr_t offset)
+{
+	int i, j;
+	unsigned char printable[15];
+	
+	for (i = j = 0; i < MAXBUF; ++i) {
+		if (j == 0) {
+			printf("%#" PRIxPTR "  ", offset);
+		}
+		printf("%02x ", s[i]);
+		printable[j++] = isprint(s[i]) ? s[i] : '.';
+		
+		if (j == 16) {
+			printf(" |%.*s|\n", 16, printable);
+			j = 0;
+			offset += 16;
+		}
+	}
+	printf("\n");
+}
+
+/**
  * Raw data diffing
  */
 static unsigned char *_get_raw_diff(unsigned char *s1, unsigned char *s2,
 	uint64_t slen, uintptr_t *offset)
 {
-	const size_t bufmax = 600;
-	unsigned char *buf = calloc(1, bufmax);
+	unsigned char *buf = calloc(1, MAXBUF);
 	register uint64_t i = 0;
 	size_t buflen = 0;
 	
-	for (; i < slen && buflen < bufmax; ++i) {
+	for (; i < slen && buflen < MAXBUF; ++i) {
 		if (s1[i] != s2[i]) {
-			buf[buflen++] = isprint(s2[i]) ? s2[i] : '.';
+			buf[buflen++] = s2[i];
 		}
 		if (buflen == 0) {
 			++offset;
@@ -83,8 +106,9 @@ static void _loop(pid_t pid, uintptr_t addrs[2])
 			unsigned char *buf = _get_raw_diff(mem, mem2, slen, &offset);
 			
 			printf("[*] segment has been changed at %" PRIxPTR "\n",
-				offset);			
-			printf("Printable snapshot (600 chars) [%s]\n", buf);
+				offset);
+			
+			_dump_segment(buf, offset);
 			free(buf);
 		}
 		
