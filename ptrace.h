@@ -32,7 +32,6 @@
 
 long ptrace_attach(pid_t);
 long ptrace_detach(pid_t);
-
 long ptrace_read_long(pid_t, uintptr_t, void*);
 
 #endif /* SMON_PTRACE_H */
