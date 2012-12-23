@@ -130,7 +130,7 @@ static void _loop(const smon_t *smon)
 		if ((mem && mem2) && memcmp(mem, mem2, slen)) {			
 			unsigned char *buf = _get_raw_diff(mem, mem2, slen, &offset);
 			
-			printf("[*] segment has been changed at %" PRIxPTR "\n",
+			printf("[*] segment has been changed at %#" PRIxPTR "\n",
 				offset);
 			
 			if (ndump < smon->maxdump) {
