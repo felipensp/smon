@@ -28,6 +28,9 @@
 #include <string.h>
 #include "ptrace.h"
 
+/**
+ * Attachs to an specific pid
+ */
 long ptrace_attach(pid_t pid)
 {
 	long ret;
@@ -39,12 +42,19 @@ long ptrace_attach(pid_t pid)
 	return ret;
 }
 
+/**
+ * Detachs from an specific pid
+ */
 long ptrace_detach(pid_t pid)
 {
 	return ptrace(PTRACE_DETACH, pid, NULL, NULL);
 }
- 
-long ptrace_read_long(pid_t pid, uintptr_t addr, void *vptr) {
+
+/**
+ * Reads a long from an specified address on the traced program
+ */ 
+long ptrace_read_long(pid_t pid, uintptr_t addr, void *vptr)
+{
 	long word = ptrace(PTRACE_PEEKTEXT, pid, addr, NULL);
 	memcpy(vptr, &word, sizeof(long));
 	
