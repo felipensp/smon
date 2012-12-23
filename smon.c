@@ -174,6 +174,7 @@ static int _find_segment(const smon_t *smon, uintptr_t addr[2])
 			&start, &end, perms, &offset, &dmajor, &dminor, &inode, 
 			filename) < 6 ||
 			(end - start) == 0) {
+			fclose(fp);
 			return 0;
 		}
 		if ((smon->segment & SMON_STACK) != 0 
@@ -183,6 +184,8 @@ static int _find_segment(const smon_t *smon, uintptr_t addr[2])
 			
 			addr[0] = start;
 			addr[1] = end;
+			
+			fclose(fp);
 			return 1;
 		}
 	}
